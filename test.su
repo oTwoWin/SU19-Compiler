@@ -1,0 +1,26 @@
+long a, b;
+
+long add(long p1, p2) {
+    return p1 + p2;
+}
+
+void count(long N) {
+    print "Counting to ";
+    write N;
+
+    long i;
+
+    i = 0;
+    while (i < N) {
+        write i;
+        i = i + 1;
+    }
+}
+{  
+    long n;
+
+    print "Enter n: ";
+    read n;
+    write add(1, n);
+    count(n);
+}
