@@ -68,8 +68,6 @@ ALPHA     [A-Za-z_]
 "%"                       { return(OPERATOR); } 
 "^"                       { return(OPERATOR); } 
 
-"="                       { return(ASSIGN); }
-
 "=="                      { return(COMPARATOR); } 
 "<="                      { return(COMPARATOR); } 
 ">="                      { return(COMPARATOR); } 
@@ -94,6 +92,7 @@ write                     { return(WRITE); }
 print                     { return(PRINT); }
 
 
+\"(\\.|[^"\\])*\"         { return(STRING);}
 
 {ALPHA}({ALPHA}|{DIGIT})* { yylval.str = strdup(yytext); return(IDENT); }
 {DIGIT}+                  { yylval.lval = atol(yytext);  return(INTVAL); }

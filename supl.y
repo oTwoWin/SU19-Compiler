@@ -117,6 +117,7 @@ program     :                                 { stack = init_stack(NULL); symtab
 
 decll       : %empty
             | decll vardecl ';'               { delete_idlist($vardecl); }
+            | decll fundecl
             ;
 
 vardecl     : type identl                     {
@@ -146,7 +147,7 @@ identl      : ident                           { $$ = (IDlist*)calloc(1, sizeof(I
 ident       : IDENT
             ;
 
-stmtblock   : '{' stmt '}'
+stmtblock   : '{' stmts '}'
             ;
 
 read        : READ ident ';'
@@ -155,11 +156,16 @@ read        : READ ident ';'
 write       : WRITE expression ';'
             ;
 
-print       : PRINT STRING ';'
+print       : PRINT string ';'
             ;
 
-expression  : number | ident
-            | expression OPERATOR 
+expressions : expression 
+            | expressions ',' expression
+            ;
+
+expression  : number 
+            | ident
+            | expression OPERATOR expression
             | '(' expression ')'
             | call 
             ;
@@ -167,14 +173,14 @@ expression  : number | ident
 number      : INTVAL    
             ;
 
-string      : '"' STRING '"'
+string      : STRING
             ;
 
 fundecl     : type ident '(' vardecl ')' stmtblock
             | type ident '(' ')' stmtblock
             ;
 
-stmtblock   : '{' stmt '}'
+stmtblock   : '{' stmts '}'
             ;
 
 stmt        : vardecl ';'
@@ -188,7 +194,11 @@ stmt        : vardecl ';'
             | print
             ;
 
-assign      : ident '=' expression
+stmts       : stmt
+            | stmts stmt
+            ;
+
+assign      : ident '=' expression ';'
             ;
 
 if          : IF '(' condition ')' stmtblock 
@@ -198,9 +208,8 @@ if          : IF '(' condition ')' stmtblock
 while       : WHILE '(' condition ')' stmtblock
             ;
 
-call        : ident '(' expression ')'
+call        : ident '(' expressions ')'
             | ident '(' ')'
-            | ident '(' expression ',' expression ')'
             ;
 
 return      : RETURN expression ';'
