@@ -76,6 +76,8 @@ extern char *yytext;
 
   char *fn_pfx   = NULL;
   EType rettype  = tVoid;
+
+  int requiresCheck = 0;
 }
 
 %start program
@@ -91,10 +93,11 @@ extern char *yytext;
 %token OPERATOR
 
 
-%type<lval> INTVAL
+%type<lval> INTVAL paramlist
 %type<str>  ident IDENT
 %type<t>    type
-%type<idl>  identl vardecl
+%type<idl>  identl vardecl paramdecl
+ 
 
 %%
 
@@ -120,7 +123,13 @@ decll       : %empty
             | decll fundecl
             ;
 
-vardecl     : type identl                     {
+vardecl     : type identl                     {	if($type == tVoid){
+							char *error = NULL;
+							asprintf(&error, "Void type for declaration of variable '%s'.", $identl->id);
+							yyerror(error);
+                                                    	free(error);
+                                                    	YYABORT;
+						}
                                                 IDlist *l = $identl;
                                                 while (l) {
                                                   if (insert_symbol(symtab, l->id, $type) == NULL) {
@@ -144,10 +153,7 @@ identl      : ident                           { $$ = (IDlist*)calloc(1, sizeof(I
             | identl ',' ident                { $$ = (IDlist*)calloc(1, sizeof(IDlist)); $$->id = $ident; $$->next = $1; }
             ;
 
-ident       : IDENT
-            ;
-
-stmtblock   : '{' stmts '}'
+ident       : IDENT		      
             ;
 
 read        : READ ident ';'
@@ -159,12 +165,20 @@ write       : WRITE expression ';'
 print       : PRINT string ';'
             ;
 
-expressions : expression 
+expressions : expression
             | expressions ',' expression
             ;
 
 expression  : number 
-            | ident
+            | ident						{ const char* i = $ident;
+									if(find_symbol(symtab, i, sLocal) == NULL){
+						                          	char *error = NULL;
+								                asprintf(&error, "Variable '%s' hasn't been declared.", i);
+								                yyerror(error);
+								                free(error);
+								                YYABORT;
+									}
+							      	}			
             | expression OPERATOR expression
             | '(' expression ')'
             | call 
@@ -176,9 +190,40 @@ number      : INTVAL
 string      : STRING
             ;
 
-fundecl     : type ident '(' vardecl ')' stmtblock
-            | type ident '(' ')' stmtblock
-            ;
+fundecl     : type ident           { Funclist *f = find_func(fnl, $ident);
+                                     if(f != NULL) {
+					printf("Function '%s' already exists.\n	", f->id);
+                                        //yyerror("Function '%s' already exists.", f->id);
+                                        YYABORT;
+                                     }
+                                     stack = init_stack(stack); symtab = init_symtab(stack, symtab);    
+                                   }
+              '(' paramdecl ')'    {
+                                        int narg = 0;
+                                        IDlist *l = $paramdecl;
+                                        while (l){
+                                            narg++;
+                                            l = l->next;
+                                        }
+                                        //delete_idlist($paramdecl);
+                                        Funclist *f = (Funclist*)calloc(1, sizeof(Funclist));
+					f->rettype = $type;
+                                        f->id = $ident;
+                                        f->narg = narg;
+                                        f->next = fnl;
+                                        fnl = f;
+                                        rettype = $type;
+					printf("function %s added\n", $ident);
+                                   }
+                stmtblock          {
+                                        Stack *pstck = stack; stack = stack->uplink; delete_stack(pstck);
+                                        Symtab *pst = symtab; symtab = symtab->parent; delete_symtab(pst);
+                                   }
+	    ;
+
+paramdecl   : %empty {}
+	    | vardecl
+	    ;
 
 stmtblock   : '{' stmts '}'
             ;
@@ -196,9 +241,18 @@ stmt        : vardecl ';'
 
 stmts       : stmt
             | stmts stmt
+	    | %empty
             ;
 
-assign      : ident '=' expression ';'
+assign      : ident '=' expression ';'				{ const char* i = $ident;
+									if(find_symbol(symtab, i, sLocal) == NULL){
+						                          	char *error = NULL;
+								                asprintf(&error, "Variable '%s' hasn't been declared.", i);
+								                yyerror(error);
+								                free(error);
+								                YYABORT;
+									}
+							      	}
             ;
 
 if          : IF '(' condition ')' stmtblock 
@@ -208,12 +262,33 @@ if          : IF '(' condition ')' stmtblock
 while       : WHILE '(' condition ')' stmtblock
             ;
 
-call        : ident '(' expressions ')'
-            | ident '(' ')'
+call        : ident '(' paramlist ')' 	{	//check existence of function
+						Funclist* fl = find_func(fnl, $ident);
+						if(fl == NULL || fl->narg != $paramlist){
+							char *error = NULL;
+							asprintf(&error, "Bad number of arguments for call to '%s'.", $ident);
+					                yyerror(error);
+					                free(error);
+					                YYABORT;
+						}
+				     	}
             ;
 
-return      : RETURN expression ';'
-            | RETURN ';'
+paramlist   : %empty      { $$ = 0;  }
+      	    | expression    { $$ = 1;  }
+      	    | paramlist ',' expression  { $$ = $1+1;  }
+      	    ;
+
+return      : RETURN expression ';' 	{ if(rettype == tVoid){
+					   	yyerror("Void expected");
+					        YYABORT;
+					  }
+					}
+            | RETURN ';'		{ if(rettype != tVoid){
+						yyerror("Expression expected");
+					        YYABORT;
+					  }
+					}
             ;
 
 condition   : expression COMPARATOR expression
@@ -250,6 +325,10 @@ int main(int argc, char *argv[])
 int yyerror(const char *msg)
 {
   printf("Parse error at %d:%d: %s\n", yylloc.first_line, yylloc.first_column, msg);
+  /*while(fnl != NULL){
+	printf("%s\n",fnl->id);
+	fnl = fnl->next;
+  }*/
   return EXIT_FAILURE;
 }
 
