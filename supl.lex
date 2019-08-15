@@ -61,24 +61,10 @@ DIGIT     [0-9]
 ALPHA     [A-Za-z_]
 
 %%
-"+"                       { return(OPERATOR); } 
-"-"                       { return(OPERATOR); } 
-"*"                       { return(OPERATOR); } 
-"/"                       { return(OPERATOR); } 
-"%"                       { return(OPERATOR); } 
-"^"                       { return(OPERATOR); } 
 
-"=="                      { return(COMPARATOR); } 
-"<="                      { return(COMPARATOR); } 
-">="                      { return(COMPARATOR); } 
-">"                       { return(COMPARATOR); }
-"<"                       { return(COMPARATOR); }  
-
-"\""                      { return(QUOTES); }  
-"\\t"                     { return(STRING); }  
-"\\n"                     { return(STRING); }  
-"\\\""                    { return(STRING); }  
-"\\\\"                    { return(STRING); }  
+"=="                      { return(EQ); } 
+"<="                      { return(LE); } 
+"<"                       { return(LT); }   
 
 long                      { return(LONG); }
 void                      { return(VOID); }
@@ -92,7 +78,7 @@ write                     { return(WRITE); }
 print                     { return(PRINT); }
 
 
-\"(\\.|[^"\\])*\"         { return(STRING);}
+\"(\\.|[^"\\])*\"         { yylval.str = strdup(yytext); return(STRING);}
 
 {ALPHA}({ALPHA}|{DIGIT})* { yylval.str = strdup(yytext); return(IDENT); }
 {DIGIT}+                  { yylval.lval = atol(yytext);  return(INTVAL); }

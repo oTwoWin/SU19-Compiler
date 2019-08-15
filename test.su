@@ -1,26 +1,34 @@
-long a, b;
-
-long add(long p1, p2) {
-    return p1 + p2;
+void f() {
+    print "Bonjour les amis";
+    long a;
+    a = 4 * 2;
+    write a;
+    return;
 }
 
-void count(long N) {
-    print "Counting to ";
-    write N;
+long x() { 
+    long a;
+    a = 8 + 3 * 4 / 2;
+    return a;
+}
 
-    long i;
 
-    i = 0;
-    while (i < N) {
-        write i;
-        i = i + 1;
+void main() {
+    long myVar;
+    myVar = 4*2;
+    long tmp;
+    tmp = 0;
+    while(tmp <= myVar) {
+         if( tmp < 4) {
+            f();
+         }
+         write x();
+         tmp = tmp + 1;
     }
+    return;
 }
-{  
-    long n;
 
-    print "Enter n: ";
-    read n;
-    write add(1, n);
-    count(n);
+
+{
+    main();
 }
